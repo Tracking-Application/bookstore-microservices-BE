@@ -22,6 +22,16 @@ Each service:
 
 ---
 
+# 🧠 Microservice Rule
+
+### Use this way to run
+
+cd auth-service
+``uvicorn main:app --port 8001``
+cd product-service
+``uvicorn main:app --port 8002``
+
+---
 # 📂 Project Structure
 
 tracking/
