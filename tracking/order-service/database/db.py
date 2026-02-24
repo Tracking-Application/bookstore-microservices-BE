@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from models.base import Base
-from models import user  # all models must be imported
+# from models import user  # all models must be imported
+from models import order
 from database.dbconfig import SQLALCHEMY_DATABASE_URL
 
 # Create engine
