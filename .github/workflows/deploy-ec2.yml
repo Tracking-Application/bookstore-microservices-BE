@@ -1,0 +1,42 @@
+﻿name: CI/CD Deploy to EC2
+
+on:
+  push:
+    branches:
+      - development
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate Docker Compose
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate compose file
+        run: docker compose -f docker-compose.yml config
+
+  deploy:
+    name: Deploy to EC2
+    needs: validate
+    if: github.ref == 'refs/heads/development'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT || '22' }}
+          script_stop: true
+          script: |
+            export APP_DIR="${{ secrets.EC2_APP_DIR }}"
+            export BRANCH="development"
+            export USE_SUDO_DOCKER="${{ secrets.EC2_USE_SUDO_DOCKER || 'false' }}"
+            bash "$APP_DIR/scripts/ec2-deploy.sh"

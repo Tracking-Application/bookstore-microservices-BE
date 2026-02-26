@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: bookstore-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bookstore_user
+      POSTGRES_PASSWORD: bookstore_pass
+      POSTGRES_DB: bookstore_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  auth-service:
+    build:
+      context: ./tracking/auth-service
+    container_name: auth-service
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bookstore_user
+      POSTGRES_PASSWORD: bookstore_pass
+      POSTGRES_DB: bookstore_db
+      DB_HOST: postgres
+      DB_PORT: 5432
+    depends_on:
+      - postgres
+    ports:
+      - "8001:8001"
+
+  products-service:
+    build:
+      context: ./tracking/products-service
+    container_name: products-service
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bookstore_user
+      POSTGRES_PASSWORD: bookstore_pass
+      POSTGRES_DB: bookstore_db
+      DB_HOST: postgres
+      DB_PORT: 5432
+    depends_on:
+      - postgres
+    ports:
+      - "8002:8002"
+
+  order-service:
+    build:
+      context: ./tracking/order-service
+    container_name: order-service
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bookstore_user
+      POSTGRES_PASSWORD: bookstore_pass
+      POSTGRES_DB: bookstore_db
+      DB_HOST: postgres
+      DB_PORT: 5432
+    depends_on:
+      - postgres
+    ports:
+      - "8003:8003"
+
+  tracking-service:
+    build:
+      context: ./tracking/tracking-service
+    container_name: tracking-service
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bookstore_user
+      POSTGRES_PASSWORD: bookstore_pass
+      POSTGRES_DB: bookstore_db
+      DB_HOST: postgres
+      DB_PORT: 5432
+    depends_on:
+      - postgres
+    ports:
+      - "8004:8004"
+
+volumes:
+  postgres_data:
