@@ -22,3 +22,4 @@ SQLALCHEMY_DATABASE_URL = (
 engine = create_async_engine(SQLALCHEMY_DATABASE_URL)
 
 
+# DATABASE_URL=postgresql://tracking_user:admin12@172.31.22.15:5432/tracking
