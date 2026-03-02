@@ -1,42 +1,137 @@
-﻿name: CI/CD Deploy to EC2
+﻿name: Backend CI/CD
 
 on:
   push:
     branches:
       - development
-  workflow_dispatch:
-
-concurrency:
-  group: deploy-production
-  cancel-in-progress: true
+    paths:
+      - 'tracking'
 
 jobs:
-  validate:
-    name: Validate Docker Compose
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
-      - name: Validate compose file
-        run: docker compose -f docker-compose.yml config
+  test-build-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+
+    # - name: Run Tests
+    #   run: |
+    #     cd backend
+    #     pytest
+
+    - name: Create Artifact
+      run: |
+        tar -czf backend-artifact.tar.gz backend
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-artifact
+        path: backend-artifact.tar.gz
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build Docker Image
+      run: |
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/bookstore-backend:latest ./backend
+
+    - name: Push Docker Image
+      run: |
+        docker push ${{ secrets.DOCKER_USERNAME }}/bookstore-backend:latest
 
   deploy:
-    name: Deploy to EC2
-    needs: validate
-    if: github.ref == 'refs/heads/development'
+    needs: test-build-publish
     runs-on: ubuntu-latest
+
     steps:
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: ${{ secrets.EC2_PORT || '22' }}
-          script_stop: true
-          script: |
-            export APP_DIR="${{ secrets.EC2_APP_DIR }}"
-            export BRANCH="development"
-            export USE_SUDO_DOCKER="${{ secrets.EC2_USE_SUDO_DOCKER || 'false' }}"
-            bash "$APP_DIR/scripts/ec2-deploy.sh"
+    - name: Deploy to EC2 via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+
+          docker stop bookstore-backend || true
+          docker rm bookstore-backend || true
+
+          docker pull ${{ secrets.DOCKER_USERNAME }}/bookstore-backend:latest
+
+          docker run -d \
+            --name bookstore-backend \
+            -p 8000:8000 \
+            --restart always \
+            ${{ secrets.DOCKER_USERNAME }}/bookstore-backend:latest
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+########################################################################################
+# name: CI/CD Deploy to EC2
+
+# on:
+#   push:
+#     branches:
+#       - development
+#   workflow_dispatch:
+
+# concurrency:
+#   group: deploy-production
+#   cancel-in-progress: true
+
+# jobs:
+#   validate:
+#     name: Validate Docker Compose
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+
+#       - name: Validate compose file
+#         run: docker compose -f docker-compose.yml config
+
+#   deploy:
+#     name: Deploy to EC2
+#     needs: validate
+#     if: github.ref == 'refs/heads/development'
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Deploy over SSH
+#         uses: appleboy/ssh-action@v1.2.0
+#         with:
+#           host: ${{ secrets.EC2_HOST }}
+#           username: ${{ secrets.EC2_USER }}
+#           key: ${{ secrets.EC2_SSH_KEY }}
+#           port: ${{ secrets.EC2_PORT || '22' }}
+#           script_stop: true
+#           script: |
+#             export APP_DIR="${{ secrets.EC2_APP_DIR }}"
+#             export BRANCH="development"
+#             export USE_SUDO_DOCKER="${{ secrets.EC2_USE_SUDO_DOCKER || 'false' }}"
+#             bash "$APP_DIR/scripts/ec2-deploy.sh"
