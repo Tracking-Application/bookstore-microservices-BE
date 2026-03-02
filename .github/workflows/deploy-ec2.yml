@@ -4,8 +4,7 @@ on:
   push:
     branches:
       - development
-    paths:
-      - 'tracking'
+  workflow_dispatch:
 
 jobs:
 
