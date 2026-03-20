@@ -1,131 +1,304 @@
-# 🛒 Tracking Application – Microservices Architecture
+# 📚 Bookstore Microservices Application
 
-This project is a microservices-based e-commerce tracking system built using FastAPI, PostgreSQL, and Docker.
+## 🏗️ Architecture Overview
 
----
+<img width="1024" height="1536" alt="image" src="https://github.com/user-attachments/assets/45f0a4a7-26b5-41e4-985a-b2e4e35e0b0b" />
 
-# 🏗 Architecture Overview
 
-This application is split into 4 independent services:
+This project is a **Microservices-based Bookstore Application** with:
 
-1. Auth Service
-2. Product Service
-3. Order Service
-4. Tracking Service
+* **Frontend (React)**
 
-Each service:
-- Has its own models
-- Has its own database folder
-- Has its own .env
-- Has its own requirements.txt
-- Runs independently
+  * Admin App
+  * Customer App
+* **Backend (FastAPI Microservices)**
 
----
+  * Auth Service
+  * Product Service
+  * Order Service
+  * Tracking Service
+* **Database**
 
-# 🧠 Microservice Rule
-
-### Use this way to run
-
-cd auth-service
-``uvicorn main:app --port 8001``
-cd product-service
-``uvicorn main:app --port 8002``
+  * PostgreSQL (Single Shared DB)
 
 ---
-# 📂 Project Structure
 
-tracking/
-│
-├── auth-service/
-│   ├── database/
-│   ├── models/
-│   ├── routes/
-│   ├── schemas/
-│   ├── utils/
-│   ├── main.py
-│   ├── .env
-│   └── requirements.txt
-│
+# 📦 Repositories
 
-├── product-service/
-│   ├── database/
-│   ├── models/
-│   ├── routes/
-│   ├── schemas/
-│   ├── main.py
-│   ├── .env
-│   └── requirements.txt
-│
+You have **2 repositories**:
 
-├── order-service/
-│   ├── database/
-│   ├── models/
-│   ├── routes/
-│   ├── schemas/
-│   ├── main.py
-│   ├── .env
-│   └── requirements.txt
-│
+### 1️⃣ Backend
 
-├── tracking-service/
-│   ├── database/
-│   ├── models/
-│   ├── routes/
-│   ├── schemas/
-│   ├── main.py
-│   ├── .env
-│   └── requirements.txt
-│
-└── README.md
-# CI/CD: GitHub Actions -> EC2 Auto Deploy
-
-This repository now includes a production deploy workflow:
-
-- Workflow: `.github/workflows/deploy-ec2.yml`
-- EC2 deploy script: `scripts/ec2-deploy.sh`
-
-## What happens on push to `main`
-
-1. GitHub Actions validates `docker-compose.yml`.
-2. If valid, Actions connects to EC2 over SSH.
-3. EC2 runs:
-   - `git fetch / git pull` on `main`
-   - `docker compose up -d --build --remove-orphans`
-
-## Required GitHub Secrets
-
-Add these in your repo: `Settings -> Secrets and variables -> Actions -> New repository secret`
-
-- `EC2_HOST`: Public IP or DNS of your EC2
-- `EC2_USER`: SSH user (usually `ubuntu` for Ubuntu AMI)
-- `EC2_SSH_KEY`: Private key content (full PEM text)
-- `EC2_PORT`: Usually `22`
-- `EC2_APP_DIR`: Absolute path on EC2 (example: `/home/ubuntu/bookstore-microservices-BE`)
-- `EC2_USE_SUDO_DOCKER`: `true` if your user needs sudo for docker, else `false`
-
-## One-time EC2 setup
-
-Run once on EC2:
-
-```bash
-sudo apt update
-sudo apt install -y docker.io docker-compose-plugin git
-sudo systemctl enable --now docker
-
-# optional: run docker without sudo
-sudo usermod -aG docker $USER
-# log out and log back in after group change
+```
+bookstore-microservices-BE
 ```
 
-Then clone repo once:
+### 2️⃣ Frontend
 
-```bash
-git clone <your-repo-url> /home/ubuntu/bookstore-microservices-BE
-cd /home/ubuntu/bookstore-microservices-BE
+```
+bookstore-microservices-FE
 ```
 
-Ensure your `docker-compose.yml` and env values are production-ready.
+---
 
-## Manual deploy trigger
+# 🚀 EC2 SETUP (FIRST TIME)
 
-You can also run deployment from GitHub Actions tab using `workflow_dispatch`.
+## ✅ Step 1: Launch EC2 Instance
+
+Use:
+
+* Amazon Linux 2023
+* t2.micro / t3.micro (free tier)
+
+---
+
+## ✅ Step 2: Install Required Tools
+
+```bash
+sudo dnf update -y
+
+# Install Docker
+sudo dnf install docker -y
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# Give permission
+sudo usermod -aG docker ec2-user
+newgrp docker
+
+# Install Git
+sudo dnf install git -y
+
+# Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.6/docker-compose-linux-x86_64" \
+-o /usr/local/bin/docker-compose
+
+sudo chmod +x /usr/local/bin/docker-compose
+```
+
+---
+
+# ⚙️ BACKEND SETUP
+
+## ✅ Step 1: Clone Backend Repo
+
+```bash
+git clone <your-backend-repo-url>
+cd bookstore-microservices-BE
+ls
+```
+
+---
+
+## ✅ Step 2: Run Docker Compose
+
+```bash
+docker-compose up -d --build
+```
+
+---
+
+## ✅ Step 3: Verify Running Containers
+
+```bash
+docker ps
+```
+
+You should see:
+
+```
+auth-service        --> 8001
+products-service    --> 8002
+order-service       --> 8003
+tracking-service    --> 8004
+postgres            --> 5432
+```
+
+---
+
+## 🌐 Backend URLs
+
+| Service          | URL                  |
+| ---------------- | -------------------- |
+| Auth Service     | http://<EC2-IP>:8001 |
+| Product Service  | http://<EC2-IP>:8002 |
+| Order Service    | http://<EC2-IP>:8003 |
+| Tracking Service | http://<EC2-IP>:8004 |
+
+---
+
+# 🎨 FRONTEND SETUP
+
+## ✅ Step 1: Clone Frontend Repo
+
+```bash
+git clone <your-frontend-repo-url>
+cd bookstore-microservices-FE
+```
+
+---
+
+## ✅ Step 2: Configure Admin App
+
+```bash
+cd tracking_admin
+ls -la
+vi .env
+```
+
+Update:
+
+```env
+VITE_AUTH_API_URL=http://<EC2-IP>:8001
+VITE_PRODUCT_API_URL=http://<EC2-IP>:8002
+VITE_ORDER_API_URL=http://<EC2-IP>:8003
+VITE_TRACKING_API_URL=http://<EC2-IP>:8004
+VITE_USER_API_URL=http://<EC2-IP>:8001
+```
+
+Save:
+
+```
+:wq!
+```
+
+---
+
+## ✅ Step 3: Configure Customer App
+
+```bash
+cd ../tracking_customer
+ls -la
+vi .env
+```
+
+Update:
+
+```env
+VITE_AUTH_API_URL=http://<EC2-IP>:8001
+VITE_PRODUCT_API_URL=http://<EC2-IP>:8002
+VITE_ORDER_API_URL=http://<EC2-IP>:8003
+VITE_TRACKING_API_URL=http://<EC2-IP>:8004
+VITE_USER_API_URL=http://<EC2-IP>:8001
+```
+
+Save:
+
+```
+:wq!
+```
+
+---
+
+## ✅ Step 4: Run Frontend
+
+```bash
+cd ..
+docker-compose up -d --build
+```
+
+---
+
+# 🌐 Frontend URLs
+
+| App          | URL                  |
+| ------------ | -------------------- |
+| Admin App    | http://<EC2-IP>:5173 |
+| Customer App | http://<EC2-IP>:5174 |
+
+---
+
+# 👤 APPLICATION FLOW
+
+## 🔐 Admin Flow
+
+1. Open:
+
+```
+http://<EC2-IP>:5173
+```
+
+2. Click **Signup**
+3. Select **Admin**
+4. Enter Secret Code:
+
+```
+#12345
+```
+
+5. Register & Login
+
+---
+
+## 🛒 Customer Flow
+
+1. Open:
+
+```
+http://<EC2-IP>:5174
+```
+
+2. Click **User Register**
+3. Login
+4. Browse products
+5. Place orders
+6. Track orders
+
+---
+
+# 🐳 Docker Commands (Useful)
+
+### View containers
+
+```bash
+docker ps
+```
+
+### View logs
+
+```bash
+docker logs <container_name>
+```
+
+### Stop all
+
+```bash
+docker-compose down
+```
+
+### Rebuild
+
+```bash
+docker-compose up -d --build
+```
+
+---
+
+# 🧠 Architecture Notes
+
+* All **4 microservices run independently**
+* All connect to **single PostgreSQL database**
+* Services communicate via **API calls (not DB joins)**
+* Frontend uses **environment variables** to call APIs
+
+---
+
+# ✅ Final Result
+
+✔ Backend running (4 services)
+✔ Frontend running (Admin + Customer)
+✔ Connected via API Gateway logic
+✔ Deployed on EC2 using Docker
+
+---
+
+# 🎯 Next Improvements
+
+* Add API Gateway (Nginx / Kong)
+* Use AWS RDS instead of local Postgres
+* Use S3 + CloudFront for frontend
+* Add CI/CD pipeline (GitHub Actions)
+
+---
+
+🔥 Your project is now **production-ready microservices architecture** 🚀
