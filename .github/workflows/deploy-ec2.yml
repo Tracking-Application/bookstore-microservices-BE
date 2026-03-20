@@ -1,0 +1,144 @@
+﻿name: Microservices CI/CD
+
+on:
+  push:
+    branches:
+      - development
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - service_path: tracking/auth-service
+            image_name: auth-service
+          - service_path: tracking/order-service
+            image_name: order-service
+          - service_path: tracking/products-service
+            image_name: products-service
+          - service_path: tracking/tracking-service
+            image_name: tracking-service
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          cd ${{ matrix.service_path }}
+          pip install -r requirements.txt
+
+      - name: Run Tests
+        run: |
+          cd ${{ matrix.service_path }}
+          echo "Testing ${{ matrix.image_name }}"
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/bookstore-${{ matrix.image_name }}:latest ./${{ matrix.service_path }}
+
+      - name: Push Docker Image
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/bookstore-${{ matrix.image_name }}:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+
+            docker pull ${{ secrets.DOCKER_USERNAME }}/bookstore-auth-service:latest
+            docker pull ${{ secrets.DOCKER_USERNAME }}/bookstore-order-service:latest
+            docker pull ${{ secrets.DOCKER_USERNAME }}/bookstore-products-service:latest
+            docker pull ${{ secrets.DOCKER_USERNAME }}/bookstore-tracking-service:latest
+
+            docker stop auth-service || true
+            docker stop order-service || true
+            docker stop products-service || true
+            docker stop tracking-service || true
+
+            docker rm auth-service || true
+            docker rm order-service || true
+            docker rm products-service || true
+            docker rm tracking-service || true
+
+            docker run -d --name auth-service -p 8001:8000 ${{ secrets.DOCKER_USERNAME }}/bookstore-auth-service:latest
+            docker run -d --name order-service -p 8002:8000 ${{ secrets.DOCKER_USERNAME }}/bookstore-order-service:latest
+            docker run -d --name products-service -p 8003:8000 ${{ secrets.DOCKER_USERNAME }}/bookstore-products-service:latest
+            docker run -d --name tracking-service -p 8004:8000 ${{ secrets.DOCKER_USERNAME }}/bookstore-tracking-service:latest
+
+
+
+
+
+
+
+
+
+
+
+
+
+########################################################################################
+# name: CI/CD Deploy to EC2
+
+# on:
+#   push:
+#     branches:
+#       - development
+#   workflow_dispatch:
+
+# concurrency:
+#   group: deploy-production
+#   cancel-in-progress: true
+
+# jobs:
+#   validate:
+#     name: Validate Docker Compose
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+
+#       - name: Validate compose file
+#         run: docker compose -f docker-compose.yml config
+
+#   deploy:
+#     name: Deploy to EC2
+#     needs: validate
+#     if: github.ref == 'refs/heads/development'
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Deploy over SSH
+#         uses: appleboy/ssh-action@v1.2.0
+#         with:
+#           host: ${{ secrets.EC2_HOST }}
+#           username: ${{ secrets.EC2_USER }}
+#           key: ${{ secrets.EC2_SSH_KEY }}
+#           port: ${{ secrets.EC2_PORT || '22' }}
+#           script_stop: true
+#           script: |
+#             export APP_DIR="${{ secrets.EC2_APP_DIR }}"
+#             export BRANCH="development"
+#             export USE_SUDO_DOCKER="${{ secrets.EC2_USE_SUDO_DOCKER || 'false' }}"
+#             bash "$APP_DIR/scripts/ec2-deploy.sh"
