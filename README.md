@@ -2,8 +2,6 @@
 
 ## 🏗️ Architecture Overview
 
-<img width="1024" height="1536" alt="image" src="https://github.com/user-attachments/assets/45f0a4a7-26b5-41e4-985a-b2e4e35e0b0b" />
-
 
 This project is a **Microservices-based Bookstore Application** with:
 
